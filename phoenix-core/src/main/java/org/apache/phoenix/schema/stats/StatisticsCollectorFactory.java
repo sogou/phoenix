@@ -17,15 +17,14 @@
  */
 package org.apache.phoenix.schema.stats;
 
-import java.io.IOException;
-import java.util.Set;
-
+import com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.phoenix.jdbc.PhoenixDatabaseMetaData;
 import org.apache.phoenix.query.QueryServices;
 
-import com.google.common.collect.Sets;
+import java.io.IOException;
+import java.util.Set;
 
 /**
  * Provides new {@link DefaultStatisticsCollector} instances based on configuration settings for a
@@ -73,7 +72,7 @@ public class StatisticsCollectorFactory {
      */
     private static boolean statisticsEnabled(RegionCoprocessorEnvironment env) {
         return env.getConfiguration().getBoolean(QueryServices.STATS_ENABLED_ATTRIB, true) &&
-                !DISABLE_STATS.contains(env.getRegionInfo().getTable());
+                !DISABLE_STATS.contains(env.getRegion().getTableDesc().getTableName());
     }
 
 }

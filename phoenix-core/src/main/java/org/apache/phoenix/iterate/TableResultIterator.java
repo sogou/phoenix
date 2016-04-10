@@ -17,19 +17,7 @@
  */
 package org.apache.phoenix.iterate;
 
-import static org.apache.phoenix.iterate.TableResultIterator.RenewLeaseStatus.CLOSED;
-import static org.apache.phoenix.iterate.TableResultIterator.RenewLeaseStatus.NOT_RENEWED;
-import static org.apache.phoenix.iterate.TableResultIterator.RenewLeaseStatus.RENEWED;
-import static org.apache.phoenix.iterate.TableResultIterator.RenewLeaseStatus.THRESHOLD_NOT_REACHED;
-import static org.apache.phoenix.iterate.TableResultIterator.RenewLeaseStatus.UNINITIALIZED;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.List;
-
-import javax.annotation.concurrent.GuardedBy;
-
-import org.apache.hadoop.hbase.client.AbstractClientScanner;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.phoenix.execute.MutationState;
@@ -40,7 +28,12 @@ import org.apache.phoenix.schema.tuple.Tuple;
 import org.apache.phoenix.util.Closeables;
 import org.apache.phoenix.util.ServerUtil;
 
-import com.google.common.annotations.VisibleForTesting;
+import javax.annotation.concurrent.GuardedBy;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.List;
+
+import static org.apache.phoenix.iterate.TableResultIterator.RenewLeaseStatus.*;
 
 
 /**
@@ -145,6 +138,8 @@ public class TableResultIterator implements ResultIterator {
         if (delay < renewLeaseThreshold) {
             return THRESHOLD_NOT_REACHED;
         }
+
+        /*
         if (scanIterator instanceof ScanningResultIterator
                 && ((ScanningResultIterator)scanIterator).getScanner() instanceof AbstractClientScanner) {
             // Need this explicit cast because HBase's ResultScanner doesn't have this method exposed.
@@ -154,6 +149,7 @@ public class TableResultIterator implements ResultIterator {
                 return RENEWED;
             }
         }
+        */
         return NOT_RENEWED;
     }
 

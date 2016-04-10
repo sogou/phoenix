@@ -2449,7 +2449,7 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
                             } catch (NewerTableAlreadyExistsException e) {
                             } catch (TableAlreadyExistsException e) {
                             }
-                            scheduleRenewLeaseTasks();
+                            // scheduleRenewLeaseTasks();
                         } catch (Exception e) {
                             if (e instanceof SQLException) {
                                 initializationException = (SQLException)e;

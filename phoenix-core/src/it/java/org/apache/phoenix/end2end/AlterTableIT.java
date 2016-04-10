@@ -17,35 +17,9 @@
  */
 package org.apache.phoenix.end2end;
 
-import static org.apache.hadoop.hbase.HColumnDescriptor.DEFAULT_REPLICATION_SCOPE;
-import static org.apache.phoenix.util.TestUtil.TEST_PROPERTIES;
-import static org.apache.phoenix.util.TestUtil.closeConnection;
-import static org.apache.phoenix.util.TestUtil.closeStatement;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.phoenix.coprocessor.MetaDataProtocol;
 import org.apache.phoenix.exception.SQLExceptionCode;
@@ -55,17 +29,19 @@ import org.apache.phoenix.query.QueryConstants;
 import org.apache.phoenix.schema.PTable;
 import org.apache.phoenix.schema.PTableKey;
 import org.apache.phoenix.schema.TableNotFoundException;
-import org.apache.phoenix.schema.types.PInteger;
-import org.apache.phoenix.util.ByteUtil;
-import org.apache.phoenix.util.IndexUtil;
-import org.apache.phoenix.util.PhoenixRuntime;
-import org.apache.phoenix.util.PropertiesUtil;
-import org.apache.phoenix.util.ReadOnlyProps;
-import org.apache.phoenix.util.SchemaUtil;
+import org.apache.phoenix.util.*;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.collect.Lists;
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Properties;
+
+import static org.apache.hadoop.hbase.HColumnDescriptor.DEFAULT_REPLICATION_SCOPE;
+import static org.apache.phoenix.util.TestUtil.*;
+import static org.junit.Assert.*;
 
 /**
  *
@@ -1203,17 +1179,17 @@ public class AlterTableIT extends BaseOwnClusterHBaseManagedTimeIT {
             assertEquals("0", columnFamilies[0].getNameAsString());
             assertEquals(8, columnFamilies[0].getMinVersions());
             assertEquals(10, columnFamilies[0].getMaxVersions());
-            assertEquals(KeepDeletedCells.FALSE, columnFamilies[0].getKeepDeletedCells());
+            assertEquals(false, columnFamilies[0].getKeepDeletedCells());
 
             assertEquals("CF1", columnFamilies[1].getNameAsString());
             assertEquals(1, columnFamilies[1].getMinVersions());
             assertEquals(10, columnFamilies[1].getMaxVersions());
-            assertEquals(KeepDeletedCells.TRUE, columnFamilies[1].getKeepDeletedCells());
+            assertEquals(true, columnFamilies[1].getKeepDeletedCells());
 
             assertEquals("CF2", columnFamilies[2].getNameAsString());
             assertEquals(3, columnFamilies[2].getMinVersions());
             assertEquals(10, columnFamilies[2].getMaxVersions());
-            assertEquals(KeepDeletedCells.FALSE, columnFamilies[2].getKeepDeletedCells());
+            assertEquals(false, columnFamilies[2].getKeepDeletedCells());
 
             assertEquals(Boolean.toString(false), tableDesc.getValue(HTableDescriptor.COMPACTION_ENABLED));
         }
