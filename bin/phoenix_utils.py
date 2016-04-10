@@ -68,6 +68,7 @@ def findClasspath(command_name):
     return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).stdout.read()
 
 def setPath():
+    PHOENIX_SERVER_JAR_PATTERN = "phoenix-*-server.jar"
     PHOENIX_CLIENT_JAR_PATTERN = "phoenix-*-client.jar"
     PHOENIX_THIN_CLIENT_JAR_PATTERN = "phoenix-*-thin-client.jar"
     PHOENIX_QUERYSERVER_JAR_PATTERN = "phoenix-server-*-runnable.jar"
@@ -108,6 +109,13 @@ def setPath():
 
     global phoenix_jar_path
     phoenix_jar_path = os.path.join(current_dir, "..", "phoenix-assembly", "target","*")
+    
+    global phoenix_server_jar
+    phoenix_server_jar = find(PHOENIX_SERVER_JAR_PATTERN, phoenix_jar_path)
+    if phoenix_server_jar == "":
+        phoenix_server_jar = findFileInPathWithoutRecursion(PHOENIX_SERVER_JAR_PATTERN, os.path.join(current_dir, ".."))
+    if phoenix_server_jar == "":
+        phoenix_server_jar = find(PHOENIX_SERVER_JAR_PATTERN, phoenix_class_path)
 
     global phoenix_client_jar
     phoenix_client_jar = find("phoenix-*-client.jar", phoenix_jar_path)
@@ -115,6 +123,11 @@ def setPath():
         phoenix_client_jar = findFileInPathWithoutRecursion(PHOENIX_CLIENT_JAR_PATTERN, os.path.join(current_dir, ".."))
     if phoenix_client_jar == "":
         phoenix_client_jar = find(PHOENIX_CLIENT_JAR_PATTERN, phoenix_class_path)
+
+    global jline_jar
+    jline_jar = findFileInPathWithoutRecursion("jline-*.jar", os.path.join(current_dir, "..", "lib"))
+    global sqlline_jar
+    sqlline_jar = findFileInPathWithoutRecursion("sqlline-*.jar", os.path.join(current_dir, "..", "lib"))
 
     global phoenix_test_jar_path
     phoenix_test_jar_path = os.path.join(current_dir, "..", "phoenix-core", "target","*")
@@ -205,6 +218,7 @@ if __name__ == "__main__":
     print "hbase_conf_path:", hbase_conf_path
     print "current_dir:", current_dir
     print "phoenix_jar_path:", phoenix_jar_path
+    print "phoenix_server_jar:", phoenix_server_jar
     print "phoenix_client_jar:", phoenix_client_jar
     print "phoenix_test_jar_path:", phoenix_test_jar_path
     print "hadoop_common_jar_path:", hadoop_common_jar_path
