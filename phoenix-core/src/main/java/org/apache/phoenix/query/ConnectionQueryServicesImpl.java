@@ -685,7 +685,11 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
             throwConnectionClosedException();
         }
 
-        return new PhoenixConnection(this, url, info, metadata);
+        PhoenixConnection connection = new PhoenixConnection(this, url, info, metadata);
+        boolean reuse = Boolean.parseBoolean(info.getProperty("phoenix.connection.reuse", "true"));
+        connection.setConnectionReuse(reuse);
+
+        return connection;
     }
 
 
@@ -2853,7 +2857,7 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
      * Increment any of the set of sequences that need more values. These are the sequences
      * that are asking for the next value within a given statement. The returned sequences
      * are the ones that were not found because they were deleted by another client.
-     * @param sequenceKeys sorted list of sequence kyes
+     * @param sequenceAllocations sorted list of sequence kyes
      * @param timestamp
      * @throws SQLException if any of the sequences cannot be found
      *

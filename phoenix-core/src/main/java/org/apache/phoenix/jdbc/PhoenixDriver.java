@@ -17,45 +17,29 @@
  */
 package org.apache.phoenix.jdbc;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import javax.annotation.concurrent.GuardedBy;
-
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.phoenix.exception.SQLExceptionCode;
 import org.apache.phoenix.exception.SQLExceptionInfo;
-import org.apache.phoenix.query.ConnectionQueryServices;
-import org.apache.phoenix.query.ConnectionQueryServicesImpl;
-import org.apache.phoenix.query.ConnectionlessQueryServicesImpl;
-import org.apache.phoenix.query.HBaseFactoryProvider;
-import org.apache.phoenix.query.QueryServices;
-import org.apache.phoenix.query.QueryServicesImpl;
-import org.apache.phoenix.query.QueryServicesOptions;
+import org.apache.phoenix.query.*;
 import org.apache.phoenix.util.PhoenixRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import javax.annotation.concurrent.GuardedBy;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.Properties;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 
 /**
- * 
+ *
  * JDBC Driver implementation of Phoenix for production.
  * To use this driver, specify the following URL:
  *     jdbc:phoenix:<zookeeper quorum server name>;
@@ -64,8 +48,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * and are not pooled. The last part of the URL, the hbase zookeeper
  * quorum server name, determines the hbase cluster to which queries
  * will be routed.
- * 
- * 
+ *
+ *
  * @since 0.1
  */
 public final class PhoenixDriver extends PhoenixEmbeddedDriver {
@@ -153,14 +137,14 @@ public final class PhoenixDriver extends PhoenixEmbeddedDriver {
         // Use production services implementation
         super();
     }
-    
+
     // writes guarded by "this"
     private volatile QueryServices services;
-    
+
     @GuardedBy("closeLock")
     private volatile boolean closed = false;
     private final ReadWriteLock closeLock = new ReentrantReadWriteLock();
-    
+
 
     @Override
     public QueryServices getQueryServices() throws SQLException {
@@ -190,7 +174,7 @@ public final class PhoenixDriver extends PhoenixEmbeddedDriver {
         // Accept the url only if test=true attribute not set
         return super.acceptsURL(url) && !isTestUrl(url);
     }
-    
+
     @Override
     public Connection connect(String url, Properties info) throws SQLException {
         if (!acceptsURL(url)) {
@@ -204,7 +188,7 @@ public final class PhoenixDriver extends PhoenixEmbeddedDriver {
             unlock(LockMode.READ);
         }
     }
-    
+
     @Override
     protected ConnectionQueryServices getConnectionQueryServices(String url, Properties info) throws SQLException {
         try {
@@ -213,16 +197,22 @@ public final class PhoenixDriver extends PhoenixEmbeddedDriver {
             ConnectionInfo connInfo = ConnectionInfo.create(url);
             QueryServices services = getQueryServices();
             ConnectionInfo normalizedConnInfo = connInfo.normalize(services.getProps());
-            ConnectionQueryServices connectionQueryServices = connectionQueryServicesMap.get(normalizedConnInfo);
+            boolean connectionReuse = Boolean.parseBoolean(info.getProperty("phoenix.connection.reuse", "true"));
+            ConnectionQueryServices connectionQueryServices = null;
+            if(connectionReuse) {
+                connectionQueryServices = connectionQueryServicesMap.get(normalizedConnInfo);
+            }
             if (connectionQueryServices == null) {
                 if (normalizedConnInfo.isConnectionless()) {
                     connectionQueryServices = new ConnectionlessQueryServicesImpl(services, normalizedConnInfo, info);
                 } else {
                     connectionQueryServices = new ConnectionQueryServicesImpl(services, normalizedConnInfo, info);
                 }
-                ConnectionQueryServices prevValue = connectionQueryServicesMap.putIfAbsent(normalizedConnInfo, connectionQueryServices);
-                if (prevValue != null) {
-                    connectionQueryServices = prevValue;
+                if(connectionReuse) {
+                    ConnectionQueryServices prevValue = connectionQueryServicesMap.putIfAbsent(normalizedConnInfo, connectionQueryServices);
+                    if (prevValue != null) {
+                        connectionQueryServices = prevValue;
+                    }
                 }
             }
             String noUpgradeProp = info.getProperty(PhoenixRuntime.NO_UPGRADE_ATTRIB);
@@ -237,8 +227,10 @@ public final class PhoenixDriver extends PhoenixEmbeddedDriver {
                 }
                 finally {
                     if (!success) {
-                        // Remove from map, as initialization failed
-                        connectionQueryServicesMap.remove(normalizedConnInfo);
+                        if(connectionReuse) {
+                            // Remove from map, as initialization failed
+                            connectionQueryServicesMap.remove(normalizedConnInfo);
+                        }
                         if (sqlE != null) {
                             throw sqlE;
                         }
@@ -250,14 +242,14 @@ public final class PhoenixDriver extends PhoenixEmbeddedDriver {
             unlock(LockMode.READ);
         }
     }
-    
+
     @GuardedBy("closeLock")
     private void checkClosed() {
         if (closed) {
             throwDriverClosedException();
         }
     }
-    
+
     private void throwDriverClosedException() {
         throw new IllegalStateException(driverShutdownMsg != null ? driverShutdownMsg : "The Phoenix jdbc driver has been closed.");
     }
@@ -282,7 +274,7 @@ public final class PhoenixDriver extends PhoenixEmbeddedDriver {
             }
         }
     }
-    
+
     private enum LockMode {
         READ, WRITE
     };
