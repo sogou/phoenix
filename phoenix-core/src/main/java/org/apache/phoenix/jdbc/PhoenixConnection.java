@@ -106,7 +106,7 @@ public class PhoenixConnection implements Connection, MetaDataMutated, SQLClosea
     private ParallelIteratorFactory parallelIteratorFactory;
     private final LinkedBlockingQueue<WeakReference<TableResultIterator>> scannerQueue;
     private TableResultIteratorFactory tableResultIteratorFactory;
-    private final boolean connectionReuse;
+    private boolean connectionReuse = true;
     
     static {
         Tracing.addTraceMetricsSource();
@@ -159,7 +159,6 @@ public class PhoenixConnection implements Connection, MetaDataMutated, SQLClosea
         this.isDescVarLengthRowKeyUpgrade = isDescVarLengthRowKeyUpgrade;
         // Copy so client cannot change
         this.info = info == null ? new Properties() : PropertiesUtil.deepCopy(info);
-        this.connectionReuse = Boolean.parseBoolean(info.getProperty("phoenix.connection.reuse", "true"));
         final PName tenantId = JDBCUtil.getTenantId(url, info);
         if (this.info.isEmpty() && tenantId == null) {
             this.services = services;
@@ -238,7 +237,11 @@ public class PhoenixConnection implements Connection, MetaDataMutated, SQLClosea
         this.tableResultIteratorFactory = new DefaultTableResultIteratorFactory();
         GLOBAL_OPEN_PHOENIX_CONNECTIONS.increment();
     }
-    
+
+    public void setConnectionReuse(boolean reuse) {
+        this.connectionReuse = reuse;
+    }
+
     private static void checkScn(Long scnParam) throws SQLException {
         if (scnParam != null && scnParam < 0) {
             throw new SQLExceptionInfo.Builder(SQLExceptionCode.INVALID_SCN).build().buildException();
@@ -413,7 +416,7 @@ public class PhoenixConnection implements Connection, MetaDataMutated, SQLClosea
     public ConnectionQueryServices getQueryServices() {
         return services;
     }
-    
+
     @Override
     public void clearWarnings() throws SQLException {
     }

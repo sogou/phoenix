@@ -686,7 +686,11 @@ public class ConnectionQueryServicesImpl extends DelegateQueryServices implement
             throwConnectionClosedException();
         }
 
-        return new PhoenixConnection(this, url, info, metadata);
+        PhoenixConnection connection = new PhoenixConnection(this, url, info, metadata);
+        boolean reuse = Boolean.parseBoolean(info.getProperty("phoenix.connection.reuse", "true"));
+        connection.setConnectionReuse(reuse);
+
+        return connection;
     }
 
 
