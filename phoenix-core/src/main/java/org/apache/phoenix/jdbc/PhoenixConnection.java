@@ -17,47 +17,13 @@
  */
 package org.apache.phoenix.jdbc;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.Collections.emptyMap;
-import static org.apache.phoenix.monitoring.GlobalClientMetrics.GLOBAL_OPEN_PHOENIX_CONNECTIONS;
-
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.Reader;
-import java.lang.ref.WeakReference;
-import java.sql.Array;
-import java.sql.Blob;
-import java.sql.CallableStatement;
-import java.sql.Clob;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.NClob;
-import java.sql.ParameterMetaData;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLClientInfoException;
-import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
-import java.sql.SQLWarning;
-import java.sql.SQLXML;
-import java.sql.Savepoint;
-import java.sql.Statement;
-import java.sql.Struct;
-import java.text.Format;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
+import co.cask.tephra.TransactionContext;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Objects;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
+import com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.phoenix.call.CallRunner;
 import org.apache.phoenix.exception.SQLExceptionCode;
@@ -72,51 +38,32 @@ import org.apache.phoenix.iterate.TableResultIterator;
 import org.apache.phoenix.iterate.TableResultIteratorFactory;
 import org.apache.phoenix.jdbc.PhoenixStatement.PhoenixStatementParser;
 import org.apache.phoenix.parse.PFunction;
-import org.apache.phoenix.query.ConnectionQueryServices;
+import org.apache.phoenix.query.*;
 import org.apache.phoenix.query.ConnectionQueryServices.Feature;
-import org.apache.phoenix.query.DelegateConnectionQueryServices;
-import org.apache.phoenix.query.MetaDataMutated;
-import org.apache.phoenix.query.QueryConstants;
-import org.apache.phoenix.query.QueryServices;
-import org.apache.phoenix.query.QueryServicesOptions;
-import org.apache.phoenix.schema.PColumn;
-import org.apache.phoenix.schema.PMetaData;
+import org.apache.phoenix.schema.*;
 import org.apache.phoenix.schema.PMetaData.Pruner;
-import org.apache.phoenix.schema.PName;
-import org.apache.phoenix.schema.PTable;
-import org.apache.phoenix.schema.PTableKey;
-import org.apache.phoenix.schema.PTableRef;
-import org.apache.phoenix.schema.PTableType;
-import org.apache.phoenix.schema.TableNotFoundException;
-import org.apache.phoenix.schema.types.PArrayDataType;
-import org.apache.phoenix.schema.types.PDataType;
-import org.apache.phoenix.schema.types.PDate;
-import org.apache.phoenix.schema.types.PDecimal;
-import org.apache.phoenix.schema.types.PTime;
-import org.apache.phoenix.schema.types.PTimestamp;
-import org.apache.phoenix.schema.types.PUnsignedDate;
-import org.apache.phoenix.schema.types.PUnsignedTime;
-import org.apache.phoenix.schema.types.PUnsignedTimestamp;
+import org.apache.phoenix.schema.types.*;
 import org.apache.phoenix.trace.util.Tracing;
-import org.apache.phoenix.util.DateUtil;
-import org.apache.phoenix.util.JDBCUtil;
-import org.apache.phoenix.util.NumberUtil;
-import org.apache.phoenix.util.PhoenixRuntime;
-import org.apache.phoenix.util.PropertiesUtil;
-import org.apache.phoenix.util.ReadOnlyProps;
-import org.apache.phoenix.util.SQLCloseable;
-import org.apache.phoenix.util.SQLCloseables;
+import org.apache.phoenix.util.*;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.TraceScope;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
-import com.google.common.collect.Lists;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.io.Reader;
+import java.lang.ref.WeakReference;
+import java.sql.*;
+import java.text.Format;
+import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
 
-import co.cask.tephra.TransactionContext;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Collections.emptyMap;
+import static org.apache.phoenix.monitoring.GlobalClientMetrics.GLOBAL_OPEN_PHOENIX_CONNECTIONS;
 
 
 /**
@@ -159,6 +106,7 @@ public class PhoenixConnection implements Connection, MetaDataMutated, SQLClosea
     private ParallelIteratorFactory parallelIteratorFactory;
     private final LinkedBlockingQueue<WeakReference<TableResultIterator>> scannerQueue;
     private TableResultIteratorFactory tableResultIteratorFactory;
+    private final boolean connectionReuse;
     
     static {
         Tracing.addTraceMetricsSource();
@@ -211,6 +159,7 @@ public class PhoenixConnection implements Connection, MetaDataMutated, SQLClosea
         this.isDescVarLengthRowKeyUpgrade = isDescVarLengthRowKeyUpgrade;
         // Copy so client cannot change
         this.info = info == null ? new Properties() : PropertiesUtil.deepCopy(info);
+        this.connectionReuse = Boolean.parseBoolean(info.getProperty("phoenix.connection.reuse", "true"));
         final PName tenantId = JDBCUtil.getTenantId(url, info);
         if (this.info.isEmpty() && tenantId == null) {
             this.services = services;
@@ -505,6 +454,9 @@ public class PhoenixConnection implements Connection, MetaDataMutated, SQLClosea
         } finally {
             isClosed = true;
             GLOBAL_OPEN_PHOENIX_CONNECTIONS.decrement();
+            if(!connectionReuse) {
+                getQueryServices().close();
+            }
         }
     }
 
