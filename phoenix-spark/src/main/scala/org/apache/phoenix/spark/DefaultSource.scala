@@ -17,8 +17,9 @@
  */
 package org.apache.phoenix.spark
 
-import org.apache.spark.sql.{SaveMode, DataFrame, SQLContext}
-import org.apache.spark.sql.sources.{CreatableRelationProvider, BaseRelation, RelationProvider}
+import org.apache.hadoop.conf.Configuration
+import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
+import org.apache.spark.sql.sources.{BaseRelation, CreatableRelationProvider, RelationProvider}
 import org.apache.phoenix.spark._
 
 class DefaultSource extends RelationProvider with CreatableRelationProvider {
@@ -43,8 +44,15 @@ class DefaultSource extends RelationProvider with CreatableRelationProvider {
 
     verifyParameters(parameters)
 
+    val conf = new Configuration
+    parameters.foreach { kv =>
+      if (kv._1.startsWith("hbase.")) {
+        conf.set(kv._1, kv._2)
+      }
+    }
+
     // Save the DataFrame to Phoenix
-    data.saveToPhoenix(parameters("table"), zkUrl = parameters.get("zkUrl"))
+    data.saveToPhoenix(parameters("table"), conf, parameters.get("zkUrl"))
 
     // Return a relation of the saved data
     createRelation(sqlContext, parameters)
