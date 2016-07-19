@@ -62,6 +62,11 @@
       <id>cloudera</id>
       <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
     </repository>
+    <repository>
+      <id>sogou.repo</id>
+      <name>Sogou Repository</name>
+      <url>http://cloud.sogou-inc.com/nexus/content/groups/public</url>
+    </repository>
   </repositories>
 
   <parent>
@@ -116,7 +121,7 @@
     <joni.version>2.1.2</joni.version>
     <calcite.version>1.6.0</calcite.version>
     <jettyVersion>8.1.7.v20120910</jettyVersion>
-    <tephra.version>0.7.0</tephra.version>
+    <tephra.version>sogou-0.7.1</tephra.version>
     <spark.version>1.5.2</spark.version>
     <scala.version>2.10.4</scala.version>
     <scala.binary.version>2.10</scala.binary.version>
@@ -558,6 +563,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-procedure</artifactId>
+        <version>${hbase.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-server</artifactId>
         <version>${hbase.version}</version>
         <type>test-jar</type>
@@ -683,7 +693,7 @@
       </dependency>
       <dependency>
         <groupId>co.cask.tephra</groupId>
-        <artifactId>tephra-hbase-compat-1.1</artifactId>
+        <artifactId>tephra-hbase-compat-1.2-cdh</artifactId>
         <version>${tephra.version}</version>
       </dependency>
 

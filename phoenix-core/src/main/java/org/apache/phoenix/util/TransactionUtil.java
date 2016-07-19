@@ -17,13 +17,10 @@
  */
 package org.apache.phoenix.util;
 
-import java.sql.SQLException;
-
 import co.cask.tephra.TransactionConflictException;
 import co.cask.tephra.TransactionFailureException;
 import co.cask.tephra.TxConstants;
-import co.cask.tephra.hbase11.TransactionAwareHTable;
-
+import co.cask.tephra.hbase12cdh.TransactionAwareHTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.phoenix.coprocessor.MetaDataProtocol.MetaDataMutationResult;
 import org.apache.phoenix.exception.SQLExceptionCode;
@@ -31,6 +28,8 @@ import org.apache.phoenix.exception.SQLExceptionInfo;
 import org.apache.phoenix.execute.MutationState;
 import org.apache.phoenix.jdbc.PhoenixConnection;
 import org.apache.phoenix.schema.PTable;
+
+import java.sql.SQLException;
 
 public class TransactionUtil {
     private TransactionUtil() {
