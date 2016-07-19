@@ -17,11 +17,6 @@
  */
 package org.apache.phoenix.hbase.index.covered.data;
 
-import java.io.IOException;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.SortedSet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
@@ -29,14 +24,14 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.IndexKeyValueSkipListSet;
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.regionserver.MemStore;
-import org.apache.hadoop.hbase.regionserver.NonLazyKeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.*;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.apache.phoenix.hbase.index.covered.KeyValueStore;
 import org.apache.phoenix.hbase.index.covered.LocalTableState;
+
+import java.io.IOException;
+import java.util.Comparator;
+import java.util.Iterator;
 
 /**
  * Like the HBase {@link MemStore}, but without all that extra work around maintaining snapshots and
@@ -55,7 +50,7 @@ import org.apache.phoenix.hbase.index.covered.LocalTableState;
  *  <li>ignoring memstore timestamps in favor of deciding when we want to overwrite keys based on how
  *    we obtain them</li>
  *   <li>ignoring time range updates (so 
- *    {@link KeyValueScanner#shouldUseScanner(Scan, SortedSet, long)} isn't supported from 
+ *    {@link KeyValueScanner#shouldUseScanner(Scan, Store, long)} isn't supported from
  *    {@link #getScanner()}).</li>
  * </ol>
  * <p>
@@ -309,9 +304,9 @@ public class IndexMemStore implements KeyValueStore {
     public long getSequenceID() {
       return Long.MAX_VALUE;
     }
-    
+
     @Override
-    public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns, long oldestUnexpiredTS) {
+    public boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS) {
       throw new UnsupportedOperationException(this.getClass().getName()
           + " doesn't support checking to see if it should use a scanner!");
     }

@@ -18,9 +18,6 @@
 
 package org.apache.phoenix.hbase.index.scanner;
 
-import java.io.IOException;
-import java.util.SortedSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -28,7 +25,10 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.phoenix.hbase.index.covered.KeyValueStore;
+
+import java.io.IOException;
 
 /**
  * Combine a simplified version of the logic in the ScanQueryMatcher and the KeyValueScanner. We can get away with this
@@ -124,9 +124,9 @@ public class FilteredKeyValueScanner implements KeyValueScanner {
     }
 
     @Override
-    public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns, long oldestUnexpiredTS) {
+    public boolean shouldUseScanner(Scan scan, Store store, long l) {
         throw new UnsupportedOperationException(this.getClass().getName()
-                + " doesn't support checking to see if it should use a scanner!");
+            + " doesn't support checking to see if it should use a scanner!");
     }
 
     @Override
